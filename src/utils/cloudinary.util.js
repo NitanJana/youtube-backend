@@ -8,17 +8,17 @@ cloudinary.config({
 });
 
 const uploadToCloudinary = async (localFilePath) => {
+  if (!localFilePath) return null;
   try {
-    if (!localFilePath) return null;
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: 'auto',
     });
 
     fs.unlinkSync(localFilePath);
     return response;
-  } catch (err) {
+  } catch (error) {
     fs.unlinkSync(localFilePath);
-    console.log(err);
+    console.log('Failed to upload image', error);
     return null;
   }
 };
