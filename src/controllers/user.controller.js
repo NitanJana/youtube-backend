@@ -7,8 +7,8 @@ import { User } from '../models/user.model.js';
 const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
 
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
@@ -133,4 +133,28 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, loginUser };
+const logOutUser = asyncHandler(async (req, res) => {
+  // Remove refresh token from user document in database
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $unset: { refreshToken: 1 },
+    },
+    { new: true },
+  );
+
+  // Set secure and httpOnly options for cookies
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  // Clear access and refresh tokens from cookies and send success response
+  res
+    .status(200)
+    .clearCookie('refreshToken', options)
+    .clearCookie('accessToken', options)
+    .json(new ApiResponse(200, 'User logged out successfully'));
+});
+
+export { registerUser, loginUser, logOutUser };
