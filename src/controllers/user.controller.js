@@ -260,4 +260,38 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logOutUser, renewAccessToken, getCurrentUser, updateUserDetails, updateAvatar };
+const updatePassword = asyncHandler(async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      throw new ApiError(400, 'All fields are required');
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    if (!(await user.checkPassword(oldPassword))) {
+      throw new ApiError(400, 'Old password is incorrect');
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json(new ApiResponse(200, 'Password updated successfully'));
+  } catch (error) {
+    throw new ApiError(500, error?.message || 'Failed to update password', error);
+  }
+});
+
+export {
+  registerUser,
+  loginUser,
+  logOutUser,
+  renewAccessToken,
+  getCurrentUser,
+  updateUserDetails,
+  updateAvatar,
+  updatePassword,
+};

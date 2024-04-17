@@ -7,6 +7,7 @@ import {
   registerUser,
   renewAccessToken,
   updateAvatar,
+  updatePassword,
   updateUserDetails,
 } from '../controllers/user.controller.js';
 import verifyToken from '../middlewares/auth.middleware.js';
@@ -31,5 +32,6 @@ router.route('/renew-token').post(renewAccessToken);
 // patch routes
 router.route('/update-account').patch(verifyToken, updateUserDetails);
 router.route('/update-avatar').patch(verifyToken, upload.single('avatar'), updateAvatar);
+router.route('/update-password').patch(verifyToken, updatePassword);
 
 export default router;
