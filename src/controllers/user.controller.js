@@ -229,6 +229,31 @@ const updateUserDetails = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, 'User details updated successfully', user));
 });
 
+const updatePassword = asyncHandler(async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      throw new ApiError(400, 'All fields are required');
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    if (!(await user.checkPassword(oldPassword))) {
+      throw new ApiError(400, 'Old password is incorrect');
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json(new ApiResponse(200, 'Password updated successfully'));
+  } catch (error) {
+    throw new ApiError(500, error?.message || 'Failed to update password', error);
+  }
+});
+
 const updateAvatar = asyncHandler(async (req, res) => {
   try {
     const avatarPath = req?.file?.path;
@@ -260,28 +285,34 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
 });
 
-const updatePassword = asyncHandler(async (req, res) => {
+const updateCoverImage = asyncHandler(async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
-    if (!oldPassword || !newPassword) {
-      throw new ApiError(400, 'All fields are required');
+    const coverImagePath = req?.file?.path;
+    if (!coverImagePath) {
+      throw new ApiError(400, 'Cover image is required');
     }
 
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      throw new ApiError(404, 'User not found');
+    const coverImage = await uploadToCloudinary(coverImagePath);
+
+    // Delete old cover image from cloudinary
+    const publicId = req.user?.coverImage?.split('/').pop().split('.')[0];
+    if (publicId) {
+      await deleteFromCloudinary(publicId);
     }
 
-    if (!(await user.checkPassword(oldPassword))) {
-      throw new ApiError(400, 'Old password is incorrect');
-    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          coverImage: coverImage.url,
+        },
+      },
+      { new: true },
+    );
 
-    user.password = newPassword;
-    await user.save();
-
-    res.status(200).json(new ApiResponse(200, 'Password updated successfully'));
+    res.status(200).json(new ApiResponse(200, 'Cover image updated successfully', user));
   } catch (error) {
-    throw new ApiError(500, error?.message || 'Failed to update password', error);
+    throw new ApiError(500, 'Failed to update cover image', error);
   }
 });
 
@@ -294,4 +325,5 @@ export {
   updateUserDetails,
   updateAvatar,
   updatePassword,
+  updateCoverImage,
 };

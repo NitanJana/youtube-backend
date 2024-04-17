@@ -7,6 +7,7 @@ import {
   registerUser,
   renewAccessToken,
   updateAvatar,
+  updateCoverImage,
   updatePassword,
   updateUserDetails,
 } from '../controllers/user.controller.js';
@@ -31,7 +32,8 @@ router.route('/renew-token').post(renewAccessToken);
 
 // patch routes
 router.route('/update-account').patch(verifyToken, updateUserDetails);
-router.route('/update-avatar').patch(verifyToken, upload.single('avatar'), updateAvatar);
 router.route('/update-password').patch(verifyToken, updatePassword);
+router.route('/update-avatar').patch(verifyToken, upload.single('avatar'), updateAvatar);
+router.route('/update-cover-image').patch(verifyToken, upload.single('coverImage'), updateCoverImage);
 
 export default router;
