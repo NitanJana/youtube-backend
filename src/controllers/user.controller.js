@@ -1,7 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.util.js';
 import ApiError from '../utils/ApiError.util.js';
 import ApiResponse from '../utils/ApiResponse.util.js';
-import uploadToCloudinary from '../utils/cloudinary.util.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinary.util.js';
 import { User } from '../models/user.model.js';
 import jwt from 'jsonwebtoken';
 
@@ -205,4 +205,59 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, 'User retrieved successfully', req.user));
 });
 
-export { registerUser, loginUser, logOutUser, renewAccessToken, getCurrentUser };
+const updateUserDetails = asyncHandler(async (req, res) => {
+  const { userName, fullName, email } = req.body;
+
+  // Ensure that all fields are present in the request body
+  if (!userName || !fullName || !email) {
+    throw new ApiError(400, 'All fields are required');
+  }
+
+  // Find and update user document based on the authenticated user's ID
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        userName,
+        fullName,
+        email,
+      },
+    },
+    { new: true },
+  ).select('-password -refreshToken');
+
+  res.status(200).json(new ApiResponse(200, 'User details updated successfully', user));
+});
+
+const updateAvatar = asyncHandler(async (req, res) => {
+  try {
+    const avatarPath = req?.file?.path;
+    if (!avatarPath) {
+      throw new ApiError(400, 'Avatar is required');
+    }
+
+    const avatar = await uploadToCloudinary(avatarPath);
+
+    // Delete old avatar from cloudinary
+    const publicId = req.user?.avatar?.split('/').pop().split('.')[0];
+    if (publicId) {
+      await deleteFromCloudinary(publicId);
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          avatar: avatar.url,
+        },
+      },
+      { new: true },
+    ).select('-password -refreshToken');
+
+    res.status(200).json(new ApiResponse(200, 'Avatar updated successfully', user));
+  } catch (error) {
+    throw new ApiError(500, 'Failed to update avatar', error);
+  }
+});
+
+export { registerUser, loginUser, logOutUser, renewAccessToken, getCurrentUser, updateUserDetails, updateAvatar };
