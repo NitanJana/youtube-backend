@@ -3,6 +3,7 @@ import ApiError from '../utils/ApiError.util.js';
 import ApiResponse from '../utils/ApiResponse.util.js';
 import uploadToCloudinary from '../utils/cloudinary.util.js';
 import { User } from '../models/user.model.js';
+import jwt from 'jsonwebtoken';
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -157,4 +158,51 @@ const logOutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, 'User logged out successfully'));
 });
 
-export { registerUser, loginUser, logOutUser };
+const renewAccessToken = asyncHandler(async (req, res) => {
+  try {
+    // Get refresh token from cookie or request body
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+
+    // Ensure that the user is making a valid request
+    if (!incomingRefreshToken) {
+      throw new ApiError(401, 'Unauthorized request');
+    }
+
+    // Verify refresh token and get user document from database
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const user = await User.findById(decodedToken._id);
+
+    // Ensure that the refresh token is valid and not expired
+    if (!user) {
+      throw new ApiError(401, 'Invalid refresh token');
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, 'Refresh token is used or expired');
+    }
+
+    // Generate new access and refresh tokens
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+    // Set secure and httpOnly options for cookies
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    // Set cookies for new access and refresh tokens and return new tokens in response body
+    res
+      .status(200)
+      .cookie('refreshToken', refreshToken, options)
+      .cookie('accessToken', accessToken, options)
+      .json(new ApiResponse(200, 'Access token renewed successfully', { accessToken, refreshToken }));
+  } catch (error) {
+    throw new ApiError(500, 'Failed to renew access token', error);
+  }
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  res.status(200).json(new ApiResponse(200, 'User retrieved successfully', req.user));
+});
+
+export { registerUser, loginUser, logOutUser, renewAccessToken, getCurrentUser };
