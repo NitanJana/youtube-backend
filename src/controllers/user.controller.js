@@ -64,8 +64,8 @@ const registerUser = asyncHandler(async (req, res) => {
     userName: userName.toLowerCase(),
     email: email.toLowerCase(),
     password,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || '',
+    avatar: avatar.secure_url,
+    coverImage: coverImage?.secure_url || '',
   });
 
   // Find user document without password and refreshToken
@@ -273,7 +273,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
       req.user._id,
       {
         $set: {
-          avatar: avatar.url,
+          avatar: avatar.secure_url,
         },
       },
       { new: true },
@@ -304,7 +304,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
       req.user._id,
       {
         $set: {
-          coverImage: coverImage.url,
+          coverImage: coverImage.secure_url,
         },
       },
       { new: true },
